@@ -17,34 +17,39 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 24.22.3
+      - name: Prepare isolated test workspace
+        shell: pwsh
+        run: |
+          $source = $env:GITHUB_WORKSPACE
+          if ($IsWindows) {
+            $target = Join-Path $env:USERPROFILE 'acm-ci'
+            New-Item -ItemType Directory -Path $target -ErrorAction Stop | Out-Null
+            Copy-Item -Path (Join-Path $source '*') -Destination $target -Recurse -Force
+          } else {
+            $target = $source
+          }
+          "ACM_CI_DIR=$target" >> $env:GITHUB_ENV
       - name: Bind the repository fixture scope
+        working-directory: ${{ env.ACM_CI_DIR }}
         shell: pwsh
         run: |
           $work = (Resolve-Path tools/fixtures/work).Path
           "ACM_TEST_ROOT=$work" >> $env:GITHUB_ENV
           "ACM_INSTALL_WORKSPACE_FIXTURE=$work" >> $env:GITHUB_ENV
       - name: Verify dependency policy
+        working-directory: ${{ env.ACM_CI_DIR }}
         run: node tools/check-dependencies.mjs
       - name: Verify SBOM
+        working-directory: ${{ env.ACM_CI_DIR }}
         run: node tools/sbom.mjs --check
       - name: Scan public source
+        working-directory: ${{ env.ACM_CI_DIR }}
         run: node tools/release.mjs scan
-      - name: Diagnose Windows fixture creation
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $path = 'tools/lock.mjs'
-          $source = [IO.File]::ReadAllText($path)
-          try {
-            $modified = $source.Replace("throw new Error(operation === 'create' ?", "console.error(result.stderr); throw new Error(operation === 'create' ?")
-            [IO.File]::WriteAllText((Resolve-Path $path), $modified, [Text.UTF8Encoding]::new($false))
-            node --test --test-name-pattern='Windows 本機監控安裝旗標' test/install.test.mjs
-          } finally {
-            [IO.File]::WriteAllText((Resolve-Path $path), $source, [Text.UTF8Encoding]::new($false))
-          }
       - name: Exercise isolated local routes and storage
+        working-directory: ${{ env.ACM_CI_DIR }}
         run: npm test
       - name: Reproduce release archive
+        working-directory: ${{ env.ACM_CI_DIR }}
         shell: pwsh
         run: |
           $first = Join-Path (Resolve-Path tools/fixtures/work).Path rc-a.tar
