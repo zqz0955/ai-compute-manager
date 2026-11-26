@@ -29,6 +29,19 @@ jobs:
         run: node tools/sbom.mjs --check
       - name: Scan public source
         run: node tools/release.mjs scan
+      - name: Diagnose Windows fixture creation
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $path = 'tools/lock.mjs'
+          $source = [IO.File]::ReadAllText($path)
+          try {
+            $modified = $source.Replace("throw new Error(operation === 'create' ?", "console.error(result.stderr); throw new Error(operation === 'create' ?")
+            [IO.File]::WriteAllText((Resolve-Path $path), $modified, [Text.UTF8Encoding]::new($false))
+            node --test --test-name-pattern='Windows 本機監控安裝旗標' test/install.test.mjs
+          } finally {
+            [IO.File]::WriteAllText((Resolve-Path $path), $source, [Text.UTF8Encoding]::new($false))
+          }
       - name: Exercise isolated local routes and storage
         run: npm test
       - name: Reproduce release archive
