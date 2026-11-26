@@ -1,0 +1,2 @@
+# Preserve reviewed SHA-256 and deterministic archive bytes across checkouts.
+* -text

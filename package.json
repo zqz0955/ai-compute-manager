@@ -1,0 +1,13 @@
+{
+  "name": "ai-compute-manager",
+  "version": "1.0.0-preview.1",
+  "private": true,
+  "type": "module",
+  "engines": {"node": ">=24.22.3 <25"},
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test --test-concurrency=1 \"test/*.test.mjs\"",
+    "doctor": "node tools/rc.mjs doctor",
+    "scan": "node tools/release.mjs scan"
+  }
+}

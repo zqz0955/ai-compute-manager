@@ -1,0 +1,1214 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AI Compute Manager local API",
+    "version": "1.0.0-rc.2",
+    "description": "IPv4 loopback controller with real read-only observations and simulated execution. Privileged actions and production generation remain gated."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8787"
+    }
+  ],
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "SchemaError": {
+        "type": "object",
+        "required": [
+          "error",
+          "requestId"
+        ],
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "Envelope": {
+        "type": "object",
+        "required": [
+          "requestId",
+          "data"
+        ],
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "Usage": {
+        "type": "object",
+        "required": [
+          "prompt_tokens",
+          "completion_tokens",
+          "total_tokens"
+        ],
+        "properties": {
+          "prompt_tokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "completion_tokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "total_tokens": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "ChatRequest": {
+        "type": "object",
+        "required": [
+          "model",
+          "messages"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "model": {
+            "type": "string",
+            "examples": [
+              "fixture:demo"
+            ]
+          },
+          "max_tokens": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "stream": {
+            "type": "boolean",
+            "default": false
+          },
+          "stream_options": {
+            "type": "object",
+            "required": [
+              "include_usage"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "include_usage": {
+                "type": "boolean"
+              }
+            }
+          },
+          "max_completion_tokens": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "messages": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 32,
+            "items": {
+              "type": "object",
+              "required": [
+                "role",
+                "content"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "role": {
+                  "enum": [
+                    "system",
+                    "user",
+                    "assistant"
+                  ]
+                },
+                "content": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        }
+      },
+      "CompletionRequest": {
+        "type": "object",
+        "required": [
+          "model",
+          "prompt"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "model": {
+            "type": "string",
+            "examples": [
+              "fixture:demo"
+            ]
+          },
+          "max_tokens": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "stream": {
+            "type": "boolean",
+            "default": false
+          },
+          "stream_options": {
+            "type": "object",
+            "required": [
+              "include_usage"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "include_usage": {
+                "type": "boolean"
+              }
+            }
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "JobRequest": {
+        "type": "object",
+        "required": [
+          "model",
+          "input"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "model": {
+            "type": "string",
+            "examples": [
+              "fixture:demo"
+            ]
+          },
+          "max_tokens": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "input": {
+            "type": "string",
+            "minLength": 1
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": -10,
+            "maximum": 10,
+            "default": 0
+          }
+        }
+      },
+      "Job": {
+        "type": "object",
+        "required": [
+          "id",
+          "model",
+          "state",
+          "canCancel"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "model": {
+            "type": "string",
+            "examples": [
+              "fixture:demo"
+            ]
+          },
+          "state": {
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "STOPPING",
+              "SUCCEEDED",
+              "FAILED",
+              "CANCELLED",
+              "INTERRUPTED"
+            ]
+          },
+          "source": {
+            "const": "SIMULATION"
+          },
+          "nodeId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "integer"
+          },
+          "attemptId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "durationMs": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "usage": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Usage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "decision": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "cleanup": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "confirmed": {
+                "type": "boolean"
+              },
+              "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          "error": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "canCancel": {
+            "type": "boolean"
+          },
+          "output": {
+            "type": "string",
+            "description": "Confirmed success. Returned only to the authorized owner."
+          }
+        }
+      },
+      "Completion": {
+        "type": "object",
+        "required": [
+          "id",
+          "created",
+          "object",
+          "model",
+          "choices",
+          "usage",
+          "acm_source"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "created": {
+            "type": "integer"
+          },
+          "object": {
+            "enum": [
+              "chat.completion",
+              "text_completion"
+            ]
+          },
+          "model": {
+            "type": "string",
+            "examples": [
+              "fixture:demo"
+            ]
+          },
+          "choices": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "usage": {
+            "$ref": "#/components/schemas/Usage"
+          },
+          "acm_source": {
+            "const": "SIMULATION"
+          }
+        }
+      },
+      "Challenge": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "nodeId"
+        ],
+        "properties": {
+          "nodeId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          }
+        }
+      },
+      "ObservationEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "nodeId",
+          "snapshot"
+        ],
+        "properties": {
+          "nodeId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "snapshot": {
+            "type": "object",
+            "description": "One Agent or authorized relay envelope, Ed25519 signed over the canonical payload.",
+            "required": [
+              "payload",
+              "signature"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "payload": {
+                "type": "object"
+              },
+              "signature": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{86}$"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/acm/v1/health": {
+      "get": {
+        "summary": "Get local API health and data source",
+        "x-acm-scope": "manage:read",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Valid response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured refusal or current work status is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/acm/v1/nodes": {
+      "get": {
+        "summary": "List nodes with identity and freshness",
+        "x-acm-scope": "manage:read",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Valid response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured refusal or current work status is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/acm/v1/nodes/{id}": {
+      "get": {
+        "summary": "Get a node projection",
+        "x-acm-scope": "manage:read",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Valid response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured refusal or current work status is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/acm/v1/nodes/{id}/models": {
+      "get": {
+        "summary": "Read model inventory for a verified synthetic source",
+        "x-acm-scope": "manage:read",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Valid response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured refusal or current work status is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/acm/v1/nodes/{id}/resident": {
+      "get": {
+        "summary": "Read fresh residency including valid empty lists",
+        "x-acm-scope": "manage:read",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Valid response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured refusal or current work status is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/acm/v1/history": {
+      "get": {
+        "summary": "Read persisted samples",
+        "x-acm-scope": "manage:read",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+            },
+            "required": false
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "required": false
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "required": false
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Valid response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured refusal or current work status is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/acm/v1/tasks": {
+      "get": {
+        "summary": "Read recent job summaries without prompts or text output",
+        "x-acm-scope": "manage:read",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Valid response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured refusal or current work status is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/acm/v1/duals": {
+      "get": {
+        "summary": "Read imported dual group summaries",
+        "x-acm-scope": "manage:read",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Valid response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured refusal or current work status is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/acm/v1/dashboard": {
+      "get": {
+        "summary": "Read dashboard with named release gates",
+        "x-acm-scope": "manage:read",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Dashboard projection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "placement": {
+                      "type": "object",
+                      "description": "Read-only admission explanation only. Does not authorize work or reserve resources. Other modes are not evaluated.",
+                      "required": ["kind", "status", "evaluatedAt", "selection", "nodes", "reservationPerformed", "dispatchPerformed"],
+                      "properties": {
+                        "kind": {"const": "READ_ONLY_ADMISSION"},
+                        "status": {"enum": ["REJECTED", "NOT_EVALUATED"]},
+                        "evaluatedAt": {"type": ["integer", "null"]},
+                        "selection": {"type": ["array", "null"], "maxItems": 0},
+                        "reservationPerformed": {"const": false},
+                        "dispatchPerformed": {"const": false},
+                        "nodes": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": ["nodeId", "eligible", "source", "status", "freshness", "executionQualification", "reasons"],
+                            "properties": {
+                              "nodeId": {"type": "string"},
+                              "eligible": {"const": false},
+                              "source": {"type": "string"},
+                              "status": {"type": "string"},
+                              "freshness": {"enum": ["FRESH", "STALE", "UNKNOWN"]},
+                              "executionQualification": {"const": "NOT_EVALUATED"},
+                              "reasons": {
+                                "type": "array",
+                                "minItems": 1,
+                                "items": {"enum": ["READ_ONLY_MODE", "OBSERVATION_NOT_EXECUTION_QUALIFICATION", "TELEMETRY_STALE", "TELEMETRY_UNKNOWN", "NODE_OFFLINE"]}
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured refusal or current work status is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/acm/v1/dashboard/history": {
+      "get": {
+        "summary": "Read recent samples of one node",
+        "x-acm-scope": "manage:read",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sample array",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured refusal or current work status is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/acm/v1/jobs": {
+      "post": {
+        "summary": "Queue a simulated job",
+        "x-acm-scope": "models:run",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Local job projection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "job"
+                  ],
+                  "properties": {
+                    "job": {
+                      "$ref": "#/components/schemas/Job"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured refusal or current work status is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/acm/v1/jobs/{id}": {
+      "get": {
+        "summary": "Get an owned job or management summary",
+        "x-acm-scope": [
+          "models:run",
+          "manage:read"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Local job projection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "job"
+                  ],
+                  "properties": {
+                    "job": {
+                      "$ref": "#/components/schemas/Job"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured refusal or current work status is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/acm/v1/jobs/{id}/cancel": {
+      "post": {
+        "summary": "Request cancellation of an owned simulated job",
+        "x-acm-scope": "models:run",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Local job projection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "job"
+                  ],
+                  "properties": {
+                    "job": {
+                      "$ref": "#/components/schemas/Job"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured refusal or current work status is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/models": {
+      "get": {
+        "summary": "List models that can run in the current configured simulation",
+        "x-acm-scope": "models:run",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Compatible model list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured refusal or current work status is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/chat/completions": {
+      "post": {
+        "summary": "Wait for a simulated chat completion or stream its verified result",
+        "x-acm-scope": "models:run",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Confirmed simulated completion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Completion"
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Progressive chunks with acm_provisional=true are previews. A final finish_reason, optional usage, and [DONE] require a committed signed terminal result. A failed stream ends without [DONE]."
+              }
+            },
+            "headers": {
+              "X-ACM-Job-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "description": "Persistent local job identifier"
+              }
+            }
+          },
+          "default": {
+            "description": "Structured refusal or current work status is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/completions": {
+      "post": {
+        "summary": "Wait for a simulated text completion or stream its verified result",
+        "x-acm-scope": "models:run",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompletionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Confirmed simulated completion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Completion"
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Progressive chunks with acm_provisional=true are previews. A final finish_reason, optional usage, and [DONE] require a committed signed terminal result. A failed stream ends without [DONE]."
+              }
+            },
+            "headers": {
+              "X-ACM-Job-Id": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "description": "Persistent local job identifier"
+              }
+            }
+          },
+          "default": {
+            "description": "Structured refusal or current work status is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/acm/v1/telemetry/challenge": {
+      "post": {
+        "summary": "Issue a one-time challenge to the enrolled telemetry publisher",
+        "x-acm-scope": "telemetry:publish",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Challenge"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Challenge or verified observation receipt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Rejected input, authorization, freshness or replay",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/acm/v1/telemetry/snapshot": {
+      "post": {
+        "summary": "Verify and persist the enrolled telemetry publisher signed observation",
+        "x-acm-scope": "telemetry:publish",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ObservationEnvelope"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Challenge or verified observation receipt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Rejected input, authorization, freshness or replay",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

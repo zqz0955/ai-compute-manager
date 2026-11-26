@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Compute Manager · V1.0 RC2</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/workbench.css">
+  <link rel="stylesheet" href="/v06.css">
+  <script type="module" src="/dashboard.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">跳至主要內容</a>
+  <header class="top">
+    <div class="brand"><span class="mark" aria-hidden="true"></span><span>AI Compute<small>Manager</small></span></div>
+    <nav class="work-nav" aria-label="主要導覽">
+      <a href="#overview" aria-current="location">節點總覽</a>
+      <a href="#setup">初次設定</a>
+      <a href="#models">模型中心</a>
+      <a href="#tasks">任務中心</a>
+      <a href="#history">監控歷史</a>
+      <a href="#benchmarks">效能測試</a>
+      <a href="#diagnostics">API 與診斷</a>
+    </nav>
+    <span id="mode" class="badge">V1.0 RC2 · 尚未連線</span>
+  </header>
+  <main id="main-content" class="work-main" tabindex="-1">
+    <section id="overview" aria-labelledby="overview-heading">
+      <header class="intro">
+        <div><h1 id="overview-heading">節點總覽</h1><p>查看裝置資源、已安裝模型與運算工作狀態。</p></div>
+        <button id="dashboard-refresh" type="button" class="secondary" disabled>重新整理總覽</button>
+      </header>
+      <div class="panel work-panel" aria-labelledby="access-heading">
+        <div class="section-head wrap">
+          <h2 id="access-heading">存取權限</h2>
+          <button id="clear-credentials" type="button" class="link" disabled>清除本頁憑證</button>
+        </div>
+        <p class="muted work-note">憑證只在本頁記憶體使用，重新載入後須再次輸入。</p>
+        <form id="access" class="access-form" method="post" autocomplete="off">
+          <div class="field">
+            <label for="read-token">管理讀取憑證 <code>manage:read</code></label>
+            <input id="read-token" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="2048">
+          </div>
+          <div class="field">
+            <label for="run-token">模型執行憑證 <code>models:run</code>（選填）</label>
+            <input id="run-token" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="2048">
+          </div>
+          <button class="primary" type="submit">套用憑證</button>
+        </form>
+        <p class="work-note"><a class="link" href="#setup">第一次使用或要登錄節點？</a></p>
+        <p id="access-status" class="muted work-note" role="status">輸入管理讀取憑證以載入工作區。</p>
+      </div>
+      <p id="mode-notice" class="work-notice mode-notice" hidden></p>
+      <div class="section-head wrap group-heading"><h2 id="devices-heading">裝置與資源</h2><span id="node-count" class="muted"></span></div>
+      <div id="nodes" class="nodes" aria-labelledby="devices-heading"></div>
+    </section>
+
+    <section id="setup" class="work-history" aria-labelledby="setup-heading">
+      <header class="section-head wrap group-heading">
+        <div><h2 id="setup-heading">初次設定</h2><p class="muted">建立本機讀取權限，選擇模擬或讀取已核對的監控來源。</p></div>
+      </header>
+      <div class="hub-grid">
+        <section class="panel work-panel" aria-labelledby="start-heading">
+          <h3 id="start-heading">本機試用</h3>
+          <ol class="setup-list">
+            <li>從已核對的候選目錄執行 <code>node tools/rc.mjs setup &lt;新安裝目錄&gt;</code>。</li>
+            <li>加入 <code>--monitor-local</code> 讀取 Windows 本機資源，或加入 <code>--simulation</code> 試跑合成工作。</li>
+            <li>以 <code>node tools/rc.mjs token issue &lt;安裝目錄&gt; viewer manage:read</code> 簽發讀取憑證。</li>
+            <li>使用手動啟動器。本頁輸入讀取憑證，模擬派送另需 <code>models:run</code>。</li>
+          </ol>
+        </section>
+        <section class="panel work-panel" aria-labelledby="enroll-heading">
+          <h3 id="enroll-heading">準備唯讀節點註冊</h3>
+          <p class="muted work-note">向設備操作人取得 Agent 公鑰及節點識別。保存下方設定片段供本機管理員核對。</p>
+          <form id="enrollment" class="setup-form" autocomplete="off">
+            <div class="field"><label for="enroll-id">節點識別</label><input id="enroll-id" maxlength="128" required placeholder="example-node"></div>
+            <div class="field"><label for="enroll-name">顯示名稱（選填）</label><input id="enroll-name" maxlength="120"></div>
+            <div class="field"><label for="enroll-source">資料來源</label><select id="enroll-source"><option value="JETSON_AGENT">Jetson Agent</option><option value="V06_V07_BRIDGE">既有唯讀監控轉接</option></select></div>
+            <div class="field"><label for="enroll-publisher">發送者識別</label><input id="enroll-publisher" maxlength="128" required placeholder="telemetry-client"></div>
+            <div class="field setup-wide"><label for="enroll-key">Ed25519 公鑰</label><input id="enroll-key" maxlength="59" required spellcheck="false" autocapitalize="none"></div>
+            <div class="setup-wide"><button class="secondary" type="submit">產生註冊設定</button></div>
+          </form>
+          <p id="enroll-status" class="muted work-note" role="status">註冊需核對發送者及公鑰。節點資料保持唯讀。</p>
+          <div id="enroll-result" hidden>
+            <label for="enroll-output">monitoring.sources 的一筆設定</label>
+            <textarea id="enroll-output" rows="8" readonly spellcheck="false"></textarea>
+            <button id="copy-enrollment" class="link" type="button">複製設定</button>
+          </div>
+        </section>
+      </div>
+    </section>
+    <section id="models" class="work-history" aria-labelledby="models-heading">
+      <header class="section-head wrap group-heading">
+        <div><h2 id="models-heading">模型中心</h2><p class="muted">查看各節點已安裝與駐留的模型。</p></div>
+        <div class="field section-filter"><label for="model-node">節點</label><select id="model-node" disabled></select></div>
+      </header>
+      <div id="model-inventory" class="inventory-grid"></div>
+    </section>
+
+    <section id="tasks" class="work-history" aria-labelledby="tasks-heading">
+      <header class="section-head wrap group-heading">
+        <div><h2 id="tasks-heading">任務中心</h2><p class="muted">查看佇列、歷史結果與資源清理狀態。</p></div>
+        <button id="task-refresh" class="secondary" type="button" disabled>更新任務</button>
+      </header>
+      <div id="task-counts" class="v06-counts" aria-label="任務數量" hidden></div>
+      <div class="hub-grid">
+        <section class="panel work-panel" aria-labelledby="queue-heading">
+          <h3 id="queue-heading">佇列與歷史</h3>
+          <div class="v06-filters">
+            <label for="task-node">節點<select id="task-node" disabled></select></label>
+            <label for="task-state-filter">狀態<select id="task-state-filter" disabled></select></label>
+          </div>
+          <p id="task-list-status" class="muted work-note"></p>
+          <ul id="task-list" class="jobs-list"></ul>
+        </section>
+        <section id="task-detail" class="panel work-panel" aria-labelledby="detail-heading" tabindex="-1">
+          <div class="section-head wrap"><h3 id="detail-heading">工作內容與測試結果</h3><span id="task-state" class="badge" hidden></span></div>
+          <p id="task-detail-status" class="muted work-note" role="status">選取工作以查看詳情。</p>
+          <div id="task-result" hidden>
+            <dl id="task-facts" class="facts"></dl>
+            <p id="task-cleanup" class="work-notice cleanup-hold" hidden></p>
+            <h4 class="output-heading">模型回應</h4>
+            <pre id="task-answer" class="v06-answer" tabindex="0" aria-label="模型回應"></pre>
+            <button id="task-cancel" class="secondary" type="button" hidden disabled>要求取消此工作</button>
+            <details>
+              <summary>排程決策、錯誤與 CLEANUP</summary>
+              <pre id="task-evidence" class="v06-json" tabindex="0" aria-label="工作決策與清理紀錄"></pre>
+            </details>
+          </div>
+        </section>
+      </div>
+      <section class="panel work-panel work-history" aria-labelledby="archive-heading">
+        <h3 id="archive-heading">既有版本歷史</h3>
+        <p id="archive-status" class="muted work-note"></p>
+        <dl id="archive-facts" class="facts" hidden></dl>
+        <div id="archive-records" class="hub-grid" hidden>
+          <details>
+            <summary>工作歷史</summary>
+            <p id="archive-task-count" class="muted work-note"></p>
+            <ul id="archive-tasks" class="jobs-list"></ul>
+          </details>
+          <details>
+            <summary>雙模型對話歷史</summary>
+            <p id="archive-dual-count" class="muted work-note"></p>
+            <ul id="archive-duals" class="jobs-list"></ul>
+          </details>
+        </div>
+      </section>
+    </section>
+
+    <section id="history" class="work-history" aria-labelledby="history-heading">
+      <header class="group-heading">
+        <div><h2 id="history-heading">監控歷史</h2><p class="muted">檢視近期採樣，缺失欄位顯示 UNKNOWN。比較圖共用時間與數值尺度。</p></div>
+        <div class="history-controls">
+          <div class="field section-filter"><label for="history-node">節點</label><select id="history-node" disabled></select></div>
+          <div class="field section-filter"><label for="history-compare">比較節點</label><select id="history-compare" disabled></select></div>
+          <button id="history-refresh" class="secondary" type="button" disabled>更新圖表</button>
+        </div>
+      </header>
+      <p id="history-status" class="work-notice" role="status"></p>
+      <div id="history-charts" class="history-charts"></div>
+      <details id="history-details" class="panel work-panel table-panel" hidden>
+        <summary>採樣明細</summary>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="監控採樣明細表">
+          <table>
+            <thead><tr><th scope="col">採樣時間</th><th scope="col">節點／來源</th><th scope="col">CPU</th><th scope="col">GPU</th><th scope="col">RAM</th><th scope="col">磁碟</th><th scope="col">溫度</th></tr></thead>
+            <tbody id="history-samples"></tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+
+    <section id="benchmarks" class="work-history" aria-labelledby="benchmarks-heading">
+      <header class="section-head wrap group-heading">
+        <div><h2 id="benchmarks-heading">模型效能測試</h2><p class="muted">建立一次模擬模型工作，在任務中心查看耗時、Token 用量及清理結果。</p></div>
+        <a id="run-result-link" href="#task-detail" class="link" hidden>查看本次測試結果</a>
+      </header>
+      <div class="panel work-panel">
+        <p id="run-availability" class="work-notice" role="status"></p>
+        <form id="run-form" method="post" autocomplete="off">
+          <fieldset id="run-controls" class="run-controls" aria-describedby="run-availability" disabled>
+            <legend class="visually-hidden">模擬測試參數</legend>
+            <div class="run-fields">
+              <div class="field"><label for="run-model">已安裝模型</label><select id="run-model" required></select></div>
+              <div class="field"><label for="max-tokens">輸出上限（最多 64 tokens）</label><input id="max-tokens" type="number" min="1" max="64" step="1" value="32" required></div>
+              <div class="field"><label for="run-priority">優先值（−10 至 10）</label><input id="run-priority" type="number" min="-10" max="10" step="1" value="0" required></div>
+            </div>
+            <div class="field">
+              <label for="run-input">測試輸入</label>
+              <textarea id="run-input" rows="4" maxlength="32768" aria-describedby="input-count" required></textarea>
+              <p id="input-count" class="muted">0 / 32,768 UTF-8 bytes</p>
+            </div>
+            <button id="run-submit" class="primary" type="submit">開始模擬測試</button>
+          </fieldset>
+        </form>
+        <p id="run-status" class="work-note" role="status"></p>
+      </div>
+    </section>
+
+    <section id="diagnostics" class="work-history" aria-labelledby="diagnostics-heading">
+      <header class="section-head wrap group-heading">
+        <div><h2 id="diagnostics-heading">API 與診斷</h2><p class="muted">核對資料來源、實機門檻與資源保護狀態。</p></div>
+      </header>
+      <div class="hub-grid">
+        <section class="panel work-panel" aria-labelledby="gate-heading">
+          <h3 id="gate-heading">版本、來源與門檻</h3>
+          <dl id="gate-facts" class="facts"></dl>
+          <details>
+            <summary>其餘 V0.6 工作區功能</summary>
+            <dl class="facts">
+              <dt>節點設定</dt><dd>唯讀來源可從初次設定準備註冊。正式變更由本機管理員操作。</dd>
+              <dt>模型安裝</dt><dd>HOLD · 目錄搜尋、下載及安裝停用。</dd>
+              <dt>雙模型對話</dt><dd>新工作 HOLD，可在任務中心查閱已導入的雙模型歷史。</dd>
+              <dt>節點終端機</dt><dd>HOLD · SSH 與遠端終端操作停用。</dd>
+              <dt>電源管理</dt><dd>HOLD · 關機與重新啟動停用。</dd>
+              <dt>實機效能測試</dt><dd>HOLD · GPU 與遠端推論維持關閉。</dd>
+            </dl>
+          </details>
+        </section>
+        <section class="panel work-panel" aria-labelledby="locks-heading">
+          <h3 id="locks-heading">資源鎖與 HOLD</h3>
+          <p id="lock-status" class="muted work-note"></p>
+          <ul id="locks" class="jobs-list"></ul>
+        </section>
+      </div>
+      <section class="panel work-panel work-history" aria-labelledby="api-heading">
+        <h3 id="api-heading">Dashboard API</h3>
+        <p class="muted work-note">以下路徑同源，憑證使用 <code>Authorization: Bearer</code>，取消須具備工作的擁有者權限。</p>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Dashboard API 路徑與權限">
+          <table>
+            <thead><tr><th scope="col">方法與路徑</th><th scope="col">權限</th><th scope="col">用途</th></tr></thead>
+            <tbody>
+              <tr><td><code>GET /acm/v1/dashboard</code></td><td><code>manage:read</code></td><td>總覽、工作、資源鎖與診斷</td></tr>
+              <tr><td><code>GET /acm/v1/dashboard/history?nodeId=…</code></td><td><code>manage:read</code></td><td>讀取節點採樣</td></tr>
+              <tr><td><code>POST /acm/v1/telemetry/challenge</code><br><code>POST /acm/v1/telemetry/snapshot</code></td><td><code>telemetry:publish</code></td><td>發送固定節點的簽章遙測</td></tr>
+              <tr><td><code>POST /acm/v1/jobs</code></td><td><code>models:run</code></td><td>建立非同步測試工作</td></tr>
+              <tr><td><code>GET /acm/v1/jobs/:id</code></td><td><code>manage:read</code> 或建立者的 <code>models:run</code></td><td>檢視狀態與允許查看的輸出</td></tr>
+              <tr><td><code>POST /acm/v1/jobs/:id/cancel</code></td><td>建立者的 <code>models:run</code></td><td>要求取消，後續以工作狀態為準</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <details>
+          <summary>其他 API 介面與憑證維護</summary>
+          <p class="muted work-note">既有唯讀管理介面沿用 <code>/acm/v1</code> 的健康狀態、節點、歷史與任務路徑，讀取需要 <code>manage:read</code>。</p>
+          <p class="muted work-note">OpenAI 相容介面提供 <code>GET /v1/models</code>、<code>POST /v1/chat/completions</code> 與 <code>POST /v1/completions</code>。模型執行需要 <code>models:run</code>，本候選只允許離線模擬推論。</p>
+          <p class="muted work-note"><code>manage:write</code> 保留給本機維護流程。關閉自行啟動的這一版候選後，在候選程式目錄執行憑證維護命令。輪替沿用原權限，撤銷的識別碼不得重用。</p>
+          <ul class="cli-list">
+            <li><code>node tools/rc.mjs token issue &lt;安裝目錄絕對路徑&gt; &lt;id&gt; &lt;scope[,scope...]&gt; [ttl-hours=24]</code></li>
+            <li><code>node tools/rc.mjs token rotate &lt;安裝目錄絕對路徑&gt; &lt;id&gt; [ttl-hours=24]</code></li>
+            <li><code>node tools/rc.mjs token revoke &lt;安裝目錄絕對路徑&gt; &lt;id&gt;</code></li>
+          </ul>
+        </details>
+      </section>
+      <section class="panel work-panel work-history" aria-labelledby="events-heading">
+        <h3 id="events-heading">事件紀錄</h3>
+        <p id="event-status" class="muted work-note"></p>
+        <div id="event-table" class="table-scroll" tabindex="0" role="region" aria-label="事件紀錄表" hidden>
+          <table>
+            <thead><tr><th scope="col">時間</th><th scope="col">事件</th><th scope="col">工作／節點</th><th scope="col">細節</th></tr></thead>
+            <tbody id="events"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  </main>
+  <noscript><p class="work-notice">請啟用 JavaScript 以讀取本機 Dashboard。</p></noscript>
+</body>
+</html>

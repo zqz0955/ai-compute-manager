@@ -1,0 +1,16 @@
+{
+  "id": "example-device",
+  "name": "Example device",
+  "resource": "example-physical",
+  "aliases": ["example-device-label"],
+  "platform": "linux-arm64",
+  "status": "UNVERIFIED",
+  "cpuCores": 4,
+  "gpuBytes": null,
+  "ramBytes": null,
+  "diskBytes": null,
+  "swapBytes": null,
+  "gpu": {"state":"UNKNOWN"},
+  "models": [],
+  "resident": []
+}

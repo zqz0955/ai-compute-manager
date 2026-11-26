@@ -1,0 +1,45 @@
+name: ACM release candidate
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  offline:
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [windows-2025, ubuntu-24.04]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.22.3
+      - name: Bind the repository fixture scope
+        shell: pwsh
+        run: |
+          $work = (Resolve-Path tools/fixtures/work).Path
+          "ACM_TEST_ROOT=$work" >> $env:GITHUB_ENV
+          "ACM_INSTALL_WORKSPACE_FIXTURE=$work" >> $env:GITHUB_ENV
+      - name: Verify dependency policy
+        run: node tools/check-dependencies.mjs
+      - name: Verify SBOM
+        run: node tools/sbom.mjs --check
+      - name: Scan public source
+        run: node tools/release.mjs scan
+      - name: Exercise isolated local routes and storage
+        run: npm test
+      - name: Reproduce release archive
+        shell: pwsh
+        run: |
+          $first = Join-Path (Resolve-Path tools/fixtures/work).Path rc-a.tar
+          $second = Join-Path (Resolve-Path tools/fixtures/work).Path rc-b.tar
+          node tools/release.mjs build $first
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tools/release.mjs build $second
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ((Get-FileHash -LiteralPath $first).Hash -ne (Get-FileHash -LiteralPath $second).Hash) { throw 'Non reproducible bytes' }
+          node tools/release.mjs verify $first
+          exit $LASTEXITCODE
