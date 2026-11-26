@@ -107,7 +107,7 @@ test('實際本機服務保留 SQLite、兩種 Token 與舊歷史隔離，來源
   assert.equal(after.events.filter(row=>row.event==='INTENT').length,
     before.events.filter(row=>row.event==='INTENT').length);
   renameSync(registry,join(install,'tokens-old.json'));
-  writeFileSync(registry,readFileSync(join(install,'tokens-old.json')));
+  writeFileSync(registry,readFileSync(join(install,'tokens-old.json')),{mode:0o600});
   assert.equal((await request('/acm/v1/dashboard',reader)).status,503);
   const log=JSON.stringify(auditors);
   assert.ok(![reader,runner,'sensitive-synthetic-prompt'].some(text=>log.includes(text)));
