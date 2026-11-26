@@ -1,0 +1,7 @@
+AI Compute Manager
+
+Project-original material that the respective rightsholders can license is provided under the Apache License, Version 2.0. See LICENSE.
+
+The distribution does not bundle Node.js, SQLite, Ollama, model weights, GitHub Actions, Chrome, Playwright or Python client libraries. These are separately obtained components or services and retain their own licenses and notices. The CI references actions/checkout and actions/setup-node; copyright GitHub, Inc. and contributors, MIT License. See docs/LICENSE-REVIEW.md for pinned references and component scope.
+
+Names and trademarks of third parties belong to their respective owners.

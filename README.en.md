@@ -2,7 +2,7 @@
 
 ACM provides a local dashboard, resource observations from Windows and signed devices, scoped management APIs, and a durable simulated work queue. The UI labels data provenance, freshness, and execution eligibility. The preview listens on IPv4 loopback.
 
-![Actual Windows dashboard running with synthetic devices](docs/screenshots/dashboard-preview.png)
+![RC2 dashboard screenshot running with synthetic devices](docs/screenshots/dashboard-preview.png)
 
 ## Quick start on Windows
 

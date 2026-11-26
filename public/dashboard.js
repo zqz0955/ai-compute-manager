@@ -242,7 +242,7 @@ function renderDashboard() {
   const nodes = rows(data?.nodes);
   const options = nodes.map(node => [node.id, node.name || node.id]);
   const mode = modeOf(data?.mode);
-  el('mode').textContent = data ? display(data.version) + ' · ' + mode : 'V1.0 RC2 · 尚未連線';
+  el('mode').textContent = data ? display(data.version) + ' · ' + mode : 'v1.0.0-preview.1 · 尚未連線';
   el('mode-notice').hidden = !data;
   el('mode-notice').dataset.mode = data?.mode || '';
   el('mode-notice').textContent = data?.mode === 'simulation'

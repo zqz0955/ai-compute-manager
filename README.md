@@ -2,7 +2,7 @@
 
 可在本機查看資源與簽章設備遙測，管理分權 API 及派送合成工作。Dashboard 會顯示資料來源、時間與工作資格。公開 API 與預設設定都只使用 IPv4 loopback。
 
-![Windows 候選的實際 Dashboard，節點使用合成資料](docs/screenshots/dashboard-preview.png)
+![RC2 候選的 Dashboard 截圖，節點使用合成資料](docs/screenshots/dashboard-preview.png)
 
 ## Windows 快速開始
 
