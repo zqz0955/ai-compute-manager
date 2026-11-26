@@ -113,7 +113,7 @@ function Confirm-Physical([string] $target) {
   while ($item -and !$checked.ContainsKey($item)) {
     if (([IO.File]::GetAttributes($item) -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'Reparse point' }
     $owner = (Read-Acl $item ([Security.AccessControl.AccessControlSections]::Owner)).GetOwner([Security.Principal.SecurityIdentifier])
-    if ($trustedOwners -notcontains $owner.Value) { throw 'Untrusted path owner' }
+    if ($trustedOwners -notcontains $owner.Value) { throw ('Untrusted path owner ' + $item + ' ' + $owner.Value) }
     $checked[$item] = $true
     $item = [IO.Path]::GetDirectoryName($item)
   }
