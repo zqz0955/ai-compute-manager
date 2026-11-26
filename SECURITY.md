@@ -2,7 +2,7 @@
 
 這是供本機驗收的候選版本。請在可信、由操作者管理的本機工作階段執行。API 僅支援 IPv4 loopback。本版未准入 LAN、公網及反向代理。
 
-發現安全問題時，請使用 [GitHub 私人漏洞通報](https://github.com/zqz0955/ai-compute-manager/security/advisories/new)，提供候選版本與雜湊、受影響平台、最小重現條件和遮蔽後的診斷。請勿在公開議題中揭露漏洞細節。保留故障與 HOLD 的原始狀態。公開內容不得包含憑證、私鑰、工作內容、備份或設備身分。
+發現安全問題時，請至 [GitHub 安全公告頁](https://github.com/zqz0955/ai-compute-manager/security/advisories) 選擇「Report a vulnerability」進行私人通報，提供候選版本與雜湊、受影響平台、最小重現條件和遮蔽後的診斷。請勿在公開議題中揭露漏洞細節。保留故障與 HOLD 的原始狀態。公開內容不得包含憑證、私鑰、工作內容、備份或設備身分。
 
 ## 安全界線
 
